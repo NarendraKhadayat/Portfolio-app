@@ -1,11 +1,10 @@
-// ========== IMPORTS ==========
 // React & Core Libraries
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useForm, ValidationError } from '@formspree/react';
 
-// 3D Helpers & Effects (drei, postprocessing)
+// 3D Helpers & Effects
 import { shaderMaterial, Html, Environment } from "@react-three/drei";
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
@@ -14,22 +13,20 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ========== TYPE DEFINITIONS ==========
+//TYPE DEFINITIONS
 type MagneticButtonProps = { children: React.ReactNode; onClick: () => void; };
 type SectionProps = { id: string; title: string; subtitle?: string; children?: React.ReactNode; };
 type ProjectLink = { label: string; href: string; };
 type Project = { title:string; tag: string; desc: string; links: ProjectLink[]; imageUrl?: string; };
 type ProjectCardProps = { p: Project; };
-// type ChatBubbleProps = { text: string; me?: boolean; };
-// type ChatResponse = { text: string; t: number; };
 
-// ========== UTILITY ----------
+// UTILITY 
 const navTo = (id: string) => {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
-// ========== 3D SHADERS & MATERIALS ==========
+// 3D SHADERS & MATERIALS
 const AuroraMaterial = shaderMaterial(
   { uTime: 0, uMouse: new THREE.Vector2(0.5, 0.5), uRes: new THREE.Vector2(1, 1) },
   `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -40,7 +37,7 @@ const AuroraMaterial = shaderMaterial(
 );
 
 function makeShader(mode: string) {
-  const shaderBodies: { [key: string]: string } = { /* Shader bodies remain the same */ };
+  const shaderBodies: { [key: string]: string } = { /* Shade bodies remain the same */ };
   shaderBodies.Aurora = `float fbm(vec2 p){ float a = 0.0; float w=0.5; mat2 r = mat2(0.8, -0.6, 0.6, 0.8); for(int i=0;i<5;i++){ a+=w*fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); p=r*p*1.9; w*=0.5; } return a; } void main(){ vec2 uv = vUv*2.0-1.0; uv.x*=uRes.x/uRes.y; float t = uTime*0.2 + float(uSeed); float n = fbm(uv*1.2 + vec2(sin(t), cos(t*1.2))*0.3); vec3 a = vec3(0.04,0.98,0.73); vec3 b = vec3(0.67,0.08,0.98); vec3 c = vec3(0.16,0.56,0.99); vec3 col = mix(mix(c,b,n), a, smoothstep(0.3,0.9,n)); col *= 0.8+0.2*sin(t+length(uv)*3.0); col = col/(col+1.0); gl_FragColor = vec4(col,1.0); }`;
   shaderBodies.Plasma = `float sdCircle(vec2 p, float r){ return length(p)-r; } void main(){ vec2 uv = vUv*2.0-1.0; uv.x*=uRes.x/uRes.y; float t = uTime*0.8 + float(uSeed)*0.3; float v = 0.0; for(int i=0;i<6;i++){ vec2 c = vec2(sin(t*0.7+float(i)*1.3), cos(t*0.5+float(i)*1.7))*0.5; float d = sdCircle(uv-c, 0.35+0.12*sin(t+float(i))); v += 0.6/abs(d*6.0+0.2); } vec3 col = vec3(0.05,0.02,0.09) + vec3(v*0.15, v*0.35, v*0.6); gl_FragColor = vec4(col,1.0); }`;
   shaderBodies.Quantum = `float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); } float voronoi(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); float res=1.0; for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 g = vec2(x,y); vec2 o = vec2(hash(i+g), hash(i+g+23.1)); vec2 r = g + o - f; res = min(res, dot(r,r)); } return sqrt(res); } void main(){ vec2 uv = vUv*2.0-1.0; uv.x*=uRes.x/uRes.y; float t = uTime*0.6 + float(uSeed); float v = voronoi(uv*3.0 + vec2(sin(t), cos(t))); vec3 a = vec3(0.04,0.98,0.73); vec3 b = vec3(0.67,0.08,0.98); vec3 c = vec3(0.16,0.56,0.99); vec3 col = mix(a,b,smoothstep(0.1,0.8,v)); col = mix(col,c,0.5+0.5*sin(v*12.0 - t*2.0)); gl_FragColor = vec4(col,1.0); }`;
@@ -49,7 +46,7 @@ function makeShader(mode: string) {
   return shaderMaterial({ uTime: 0, uSeed: 0, uMouse: new THREE.Vector2(0.5, 0.5), uRes: new THREE.Vector2(1, 1) }, vertexShader, fragmentShader);
 }
 
-// ========== 3D COMPONENTS ==========
+// 3D COMPONENTS
 
 function NeuralNetwork() {
   const nodesRef = useRef<THREE.Points>(null!);
@@ -92,18 +89,15 @@ function NeuralNetwork() {
 
   return (
     <group position={[0, 0.5, 0]}>
-      {/* Neurons */}
+      {/* Neurons in array */}
       <points ref={nodesRef}>
         <bufferGeometry>
-          {/* --- FIX IS HERE --- */}
           <bufferAttribute attach="attributes-position" args={[nodes, 3]} />
         </bufferGeometry>
         <pointsMaterial size={0.03} color="#00BFFF" />
       </points>
-      {/* Synapses */}
       <lineSegments ref={linesRef}>
         <bufferGeometry>
-          {/* --- AND FIX IS HERE --- */}
           <bufferAttribute attach="attributes-position" args={[lines, 3]} />
         </bufferGeometry>
         <shaderMaterial uniforms={{ uTime: { value: 0 } }} vertexShader={`uniform float uTime;varying float vOpacity;void main(){vec3 pos=position;float pulse=sin(pos.z*2.-uTime*2.)*.5+.5;vOpacity=pow(pulse,3.)*.6;gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.);}`} fragmentShader={`varying float vOpacity;void main(){gl_FragColor=vec4(.0,.75,1.,vOpacity);}`} transparent={true} blending={THREE.AdditiveBlending} />
@@ -111,58 +105,6 @@ function NeuralNetwork() {
     </group>
   );
 }
-
-// function NeuralNetwork() {
-//   const nodesRef = useRef<THREE.Points>(null!);
-//   const linesRef = useRef<THREE.LineSegments>(null!);
-//   const { nodes, lines } = useMemo(() => {
-//     const nodes = [];
-//     const lines = [];
-//     const layerCount = 4; const nodesPerLayer = 16; const layerDepth = 2; const nodeSpacing = 0.4;
-//     for (let i = 0; i < layerCount; i++) {
-//       const z = i * layerDepth - ((layerCount - 1) * layerDepth) / 2;
-//       for (let j = 0; j < nodesPerLayer; j++) {
-//         const row = Math.floor(j / 4) - 1.5;
-//         const col = (j % 4) - 1.5;
-//         nodes.push(col * nodeSpacing, row * nodeSpacing, z);
-//       }
-//     }
-//     for (let i = 0; i < layerCount - 1; i++) {
-//       for (let j = 0; j < nodesPerLayer; j++) {
-//         for (let k = 0; k < nodesPerLayer; k++) {
-//           if (Math.random() > 0.95) {
-//             const startNodeIndex = i * nodesPerLayer + j;
-//             const endNodeIndex = (i + 1) * nodesPerLayer + k;
-//             lines.push(nodes[startNodeIndex * 3], nodes[startNodeIndex * 3 + 1], nodes[startNodeIndex * 3 + 2], nodes[endNodeIndex * 3], nodes[endNodeIndex * 3 + 1], nodes[endNodeIndex * 3 + 2]);
-//           }
-//         }
-//       }
-//     }
-//     return { nodes: new Float32Array(nodes), lines: new Float32Array(lines) };
-//   }, []);
-
-//   useFrame((state) => {
-//     const time = state.clock.getElapsedTime();
-//     if (nodesRef.current && linesRef.current) {
-//       (linesRef.current.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
-//       nodesRef.current.rotation.y = time * 0.05;
-//       linesRef.current.rotation.y = time * 0.05;
-//     }
-//   });
-
-//   return (
-//     <group>
-//       <points ref={nodesRef}>
-//         <bufferGeometry><bufferAttribute attach="attributes-position" count={nodes.length / 3} array={nodes} itemSize={3} /></bufferGeometry>
-//         <pointsMaterial size={0.03} color="#00BFFF" />
-//       </points>
-//       <lineSegments ref={linesRef}>
-//         <bufferGeometry><bufferAttribute attach="attributes-position" count={lines.length / 3} array={lines} itemSize={3} /></bufferGeometry>
-//         <shaderMaterial uniforms={{ uTime: { value: 0 } }} vertexShader={`uniform float uTime; varying float vOpacity; void main() { vec3 pos = position; float pulse = sin(pos.z * 2.0 - uTime * 2.0) * 0.5 + 0.5; vOpacity = pow(pulse, 3.0) * 0.6; gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); }`} fragmentShader={`varying float vOpacity; void main() { gl_FragColor = vec4(0.0, 0.75, 1.0, vOpacity); }`} transparent={true} blending={THREE.AdditiveBlending} />
-//       </lineSegments>
-//     </group>
-//   );
-// }
 
 function GalaxyDust() {
   const ref = useRef<THREE.Points>(null!);
@@ -186,7 +128,6 @@ function GalaxyDust() {
   return (
     <points ref={ref}>
       <bufferGeometry>
-        {/* --- FIX IS HERE --- */}
         <bufferAttribute attach="attributes-position" args={[particles, 3]} />
       </bufferGeometry>
       <pointsMaterial size={0.015} color="#5B86E5" />
@@ -232,7 +173,7 @@ function CameraAnimator() {
   return null;
 }
 
-// ========== UI COMPONENTS ==========
+// UI COMPONENTS 
 function MagneticButton({ children, onClick }: MagneticButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -262,13 +203,8 @@ function MagneticButton({ children, onClick }: MagneticButtonProps) {
   );
 }
 
-// function ChatBubble({ text, me }: ChatBubbleProps) {
-//   return (<motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`max-w-[85%] ${me ? "ml-auto bg-fuchsia-500/20" : "bg-white/10"} p-3 rounded-2xl border border-white/10 backdrop-blur`}> {text} </motion.div>);
-// }
-
 
 function Navbar() {
-  // 1. Add state to track if the mobile menu is open or closed
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -279,7 +215,6 @@ function Navbar() {
 
   const links = [{ id: "hero", label: "Home" }, { id: "about", label: "About" }, { id: "skills", label: "Skills" }, { id: "projects", label: "Projects" }, { id: "lab", label: "PlayGround" }, { id: "contact", label: "Contact" }];
 
-  // 2. A new component for the mobile menu overlay
   const MobileMenu = () => (
     <motion.div
       initial={{ opacity: 0 }}
@@ -296,7 +231,7 @@ function Navbar() {
             transition={{ delay: 0.1 * index, ease: "easeOut" }}
             onClick={() => {
               navTo(link.id);
-              setIsMenuOpen(false); // Close menu on link click
+              setIsMenuOpen(false);
             }}
             className="text-2xl font-semibold text-white/80 hover:text-white transition-colors"
           >
@@ -318,39 +253,18 @@ function Navbar() {
             {links.map((l) => (<button key={l.id} onClick={() => navTo(l.id)} className="px-3 py-1 rounded-xl hover:bg-white/10 transition text-sm">{l.label}</button>))}
           </div>
           <div className="md:hidden flex gap-2">
-            {/* 3. This button now toggles the menu state */}
             <MagneticButton onClick={() => setIsMenuOpen(!isMenuOpen)}>Menu</MagneticButton>
             <MagneticButton onClick={() => navTo("contact")}>Collab</MagneticButton>
           </div>
         </div>
       </nav>
       
-      {/* 4. This conditionally renders the menu with an exit animation */}
       <AnimatePresence>
         {isMenuOpen && <MobileMenu />}
       </AnimatePresence>
     </>
   );
 }
-
-// function Navbar() {
-//   useEffect(() => {
-//     gsap.registerPlugin(ScrollTrigger);
-//     const show = gsap.to("#nav", { backgroundColor: "rgba(5,8,13,0.6)", backdropFilter: "blur(8px)", duration: 0.3, paused: true });
-//     ScrollTrigger.create({ start: 10, onUpdate: (self) => { if (self.scroll() > 10) show.play(); else show.reverse(); } });
-//   }, []);
-//   const links = [{ id: "hero", label: "Home" }, { id: "about", label: "About" }, { id: "skills", label: "Skills" }, { id: "projects", label: "Projects" }, { id: "lab", label: "Neural Lab" }, { id: "contact", label: "Contact" }];
-//   return (
-//     <nav id="nav" className="fixed z-50 top-4 left-1/2 -translate-x-1/2 w-[92%] md:w-[80%] rounded-2xl px-4 py-3 border border-white/10 bg-white/5 backdrop-blur-xl">
-//       <div className="flex items-center justify-between">
-//         <div className="font-black tracking-widest text-sm md:text-base select-none"><span className="text-fuchsia-300">N</span><span className="text-cyan-300">A</span><span className="text-emerald-300">R</span><span className="text-fuchsia-300">E</span><span className="text-cyan-300">N</span><span className="text-emerald-300">द्र</span><span className="text-blue-300">-</span><span className="text-violet-300">PORT</span></div>
-//         <div className="hidden md:flex gap-4">{links.map((l) => (<button key={l.id} onClick={() => navTo(l.id)} className="px-3 py-1 rounded-xl hover:bg-white/10 transition text-sm">{l.label}</button>))}</div>
-//         <div className="md:hidden"><MagneticButton onClick={() => navTo("contact")}>Menu</MagneticButton></div>
-//         <div className="md:hidden"><MagneticButton onClick={() => navTo("contact")}>Hire Me</MagneticButton></div>
-//       </div>
-//     </nav>
-//   );
-// }
 
 function Hero() {
   const mouse = useRef(new THREE.Vector2(0.5, 0.5));
@@ -474,36 +388,6 @@ const projects: Project[] = [
   { title: "N-GPT", tag: "LLM Model", desc: "Under Development.", links: [{ label: "Overview", href: "#" }], imageUrl: "/ComingSoon.jpg", },
 ];
 
-// function ProjectCard({ p }: ProjectCardProps) {
-//   const ref = useRef<HTMLDivElement>(null);
-//   useEffect(() => {
-//     if (!ref.current) return;
-//     const ctx = gsap.context(() => {
-//       const el = ref.current!;
-//       const onMove = (e: MouseEvent) => {
-//         const r = el.getBoundingClientRect();
-//         const x = (e.clientX - (r.left + r.width / 2)) / r.width;
-//         const y = (e.clientY - (r.top + r.height / 2)) / r.height;
-//         gsap.to(el, { rotateY: x * 8, rotateX: -y * 8, transformPerspective: 800, duration: 0.4, ease: "power3.out" });
-//       };
-//       const onLeave = () => gsap.to(el, { rotateX: 0, rotateY: 0, duration: 0.6, ease: "expo.out" });
-//       el.addEventListener("mousemove", onMove);
-//       el.addEventListener("mouseleave", onLeave);
-//     }, ref);
-//     return () => ctx.revert();
-//   }, []);
-
-//   return (
-//     <div ref={ref} className="group p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur relative overflow-hidden">
-//       <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-cyan-400/10 blur-3xl pointer-events-none" />
-//       <div className="flex items-center justify-between mb-3"><span className="text-xs px-2 py-1 rounded-lg bg-white/10 border border-white/10">{p.tag}</span><div className="flex gap-2">{p.links.map((l) => (<a key={l.label} href={l.href} className="text-sm underline underline-offset-4 decoration-dotted hover:opacity-80">{l.label}</a>))}</div></div>
-//       <h3 className="text-xl font-semibold">{p.title}</h3>
-//       <p className="mt-2 text-white/70">{p.desc}</p>
-//       <div className="mt-6 h-40 rounded-xl bg-gradient-to-tr from-white/5 to-white/0 border border-white/10 overflow-hidden"><div className="h-full w-full [background:repeating-linear-gradient(60deg,rgba(255,255,255,0.05)_0_10px,transparent_10px_20px)]" /></div>
-//     </div>
-//   );
-// }
-
 function ProjectCard({ p }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   
@@ -524,12 +408,10 @@ function ProjectCard({ p }: ProjectCardProps) {
     return () => ctx.revert();
   }, []);
 
-  // Determine the main link for the image click
-  // Prioritize "Visit" or "Live Demo", then "Overview", then "Case Study"
   const mainLink = p.links.find(l => l.label.includes("Visit") || l.label.includes("Live Demo"))?.href || 
                    p.links.find(l => l.label.includes("Overview"))?.href ||
                    p.links.find(l => l.label.includes("Case Study"))?.href ||
-                   '#'; // Fallback if no specific link type found
+                   '#';
 
   return (
     <div ref={ref} className="group p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur relative overflow-hidden">
@@ -553,7 +435,6 @@ function ProjectCard({ p }: ProjectCardProps) {
       <h3 className="text-xl font-semibold">{p.title}</h3>
       <p className="mt-2 text-white/70">{p.desc}</p>
       
-      {/* --- THIS IS THE NEW IMAGE PREVIEW SECTION --- */}
       <div className="mt-6 h-40 rounded-xl overflow-hidden bg-white/5 border border-white/10">
         {p.imageUrl ? (
           <a href={mainLink} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative group">
@@ -562,7 +443,6 @@ function ProjectCard({ p }: ProjectCardProps) {
               alt={`${p.title} preview`} 
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
             />
-            {/* Optional: Add an overlay for visual effect on hover */}
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
           </a>
         ) : (
@@ -571,7 +451,6 @@ function ProjectCard({ p }: ProjectCardProps) {
           </div>
         )}
       </div>
-      {/* --- END NEW IMAGE PREVIEW SECTION --- */}
       
     </div>
   );
@@ -608,27 +487,6 @@ function ShaderPreview({ mode, seed }: { mode: string, seed: number }) {
   );
 }
 
-// function NeuralLab() {
-//   const [mode, setMode] = useState("Aurora");
-//   const [seed, setSeed] = useState(1);
-//   const modes = ["Aurora", "Plasma", "Quantum"];
-//   return (
-//     <Section id="lab" title="Neural Lab" subtitle="Interact with the live engine that paints this portfolio. Procedural, responsive, and infinitely variable.">
-//       <div className="flex flex-wrap gap-3 mb-6">
-//         {modes.map((m) => (<button key={m} onClick={() => setMode(m)} className={`px-3 py-1 rounded-xl border ${mode === m ? "bg-white/20 border-white/40" : "bg-white/5 border-white/10"}`}>{m}</button>))}
-//         <button onClick={() => setSeed((s) => s + 1)} className="px-3 py-1 rounded-xl bg-white/10 border border-white/10">Randomize</button>
-//       </div>
-//       <div className="grid md:grid-cols-2 gap-6">
-//         <ShaderPreview mode={mode} seed={seed} />
-//         <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-//           <h3 className="font-semibold mb-2">What you’re seeing</h3><p className="text-white/70">Real‑time GPU shaders reacting to your cursor and scroll. A tiny generative model maps inputs to color fields in a filmic palette. Every frame is unique.</p>
-//           <ul className="mt-4 text-white/70 list-disc list-inside space-y-1"><li>Fully procedural — zero image assets.</li><li>Adaptive to DPI and device power.</li><li>Micro‑latency interactions engineered with GSAP + R3F.</li></ul>
-//         </div>
-//       </div>
-//     </Section>
-//   );
-// }
-
 function NeuralLab() {
   const [mode, setMode] = useState("Aurora");
   const [seed, setSeed] = useState(1);
@@ -637,7 +495,6 @@ function NeuralLab() {
   return (
     <Section id="lab" title="PLAY-GROUND" subtitle="Interact with the live engine that paints this portfolio. Procedural, responsive, and infinitely variable.">
       
-      {/* Buttons have been reverted to the old style */}
       <div className="flex flex-wrap justify-center gap-3 mb-6">
         {modes.map((m) => (
           <button 
@@ -656,7 +513,6 @@ function NeuralLab() {
         </button>
       </div>
 
-      {/* The new attractive layout remains */}
       <div className="relative">
         <ShaderPreview mode={mode} seed={seed} />
 
@@ -677,58 +533,21 @@ function NeuralLab() {
   );
 }
 
-// function Contact() {
-//   const [name, setName] = useState("");
-//   const [email, setEmail] = useState("");
-//   const [msg, setMsg] = useState("");
-//   const [responses, setResponses] = useState<ChatResponse[]>([]);
-//   useEffect(() => {
-//     if (!msg) return;
-//     const last = msg.toLowerCase();
-//     const tip = last.includes("hire") ? "Love that! I can share timelines and estimates." : last.includes("timeline") ? "Typical timelines depend on scope; quick MVPs in weeks, platforms in months." : last.includes("budget") ? "We can scope features to fit your budget without compromising quality." : "Thanks for reaching out—I'll respond fast.";
-//     setResponses((r) => [...r.slice(-3), { text: tip, t: Date.now() }]);
-//   }, [msg]);
-//   return (
-//     <Section id="contact" title="Contact" subtitle="Let’s build something that feels inevitable.">
-//       <div className="grid md:grid-cols-2 gap-6">
-//         <form onSubmit={(e) => e.preventDefault()} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-//           <div><label className="text-sm text-white/70">Name</label><input value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/40" placeholder="Your name" /></div>
-//           <div><label className="text-sm text-white/70">Email</label><input type="email" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="you@example.com" /></div>
-//           <div><label className="text-sm text-white/70">Message</label><textarea value={msg} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMsg(e.target.value)} rows={5} className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none" placeholder="Tell me about your idea…"></textarea></div>
-//           <div className="flex gap-3"><MagneticButton onClick={() => alert("Message queued locally — connect backend to send.")}>Send</MagneticButton><a href={`mailto:narendrakhadayat@example.com?subject=Project%20Inquiry&body=${encodeURIComponent(msg)}`} className="px-6 py-3 rounded-2xl bg-white/10 border border-white/10">Email</a></div>
-//           <p className="text-xs text-white/60">Note: This demo stores nothing. Wire to your backend or Formspree to actually send.</p>
-//         </form>
-//         <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-//           <h3 className="font-semibold mb-2">Live Assistant</h3>
-//           <div className="space-y-3 max-h-72 overflow-auto pr-2">
-//             <ChatBubble me text={`Hi ${name || "there"}! Share a few lines about your project.`} />
-//             <AnimatePresence>{responses.map((r) => <ChatBubble key={r.t} text={r.text} />)}</AnimatePresence>
-//           </div>
-//         </div>
-//       </div>
-//     </Section>
-//   );
-// }
-
-// Add this import at the top of your App.tsx file
-
 
 function Contact() {
-  const [state, handleSubmit] = useForm("mqadazdv"); // Your Formspree ID
+  const [state, handleSubmit] = useForm("mqadazdv");
 
   return (
     <Section id="contact" title="CONTACT" subtitle="Let's make something out of the box.">
       <div className="grid md:grid-cols-2 gap-6">
         
-        {/* --- Column 1: This will now switch between the Form and the Success Message --- */}
         {state.succeeded ? (
-          // This is the "Thank You" message that appears after submission
           <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center items-center text-center h-full">
             <h3 className="font-semibold text-2xl text-white">Thank You!</h3>
             <p className="text-white/70 mt-2">Your message has been sent successfully. I'll get back to you soon.</p>
           </div>
         ) : (
-          // This is the original Form that shows by default
+
           <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
             <div>
               <label htmlFor="name" className="text-sm text-white/70">Name</label>
@@ -736,7 +555,7 @@ function Contact() {
             </div>
             <div>
               <label htmlFor="email" className="text-sm text-white/70">Email</label>
-              <input id="email" type="email" name="email" required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="you@example.com" />
+              <input id="email" type="email" name="email" required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="Your Email" />
               <ValidationError prefix="Email" field="email" errors={state.errors} className="text-red-400 text-xs mt-1" />
             </div>
             <div>
@@ -752,7 +571,7 @@ function Contact() {
           </form>
         )}
 
-        {/* --- Column 2: Your Social Links Panel (This part is unchanged) --- */}
+
         <div 
           className="p-6 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden"
         >
@@ -761,7 +580,7 @@ function Contact() {
             alt="Glowing portrait background image"
             className="absolute inset-0 w-full h-full object-contain z-0"
             style={{ 
-              opacity: 0.8, // Increased opacity for better visibility
+              opacity: 0.8,
               filter: "drop-shadow(0 0 15px rgba(0, 191, 255, 0.8))" }}
           />
           <div className="relative z-10">
@@ -795,131 +614,6 @@ function Contact() {
   );
 }
 
-
-// Add these imports at the top of your file
-
-// function Contact() {
-//   const [state, handleSubmit] = useForm("mqadazdv"); // <-- PASTE YOUR FORMSPREE ID HERE
-
-//   if (state.succeeded) {
-//       return (
-//         <Section id="contact" title="CONTACT" subtitle="Thanks for reaching out! I'll get back to you soon.">
-//             {/* Success message can be styled further if needed */}
-//         </Section>
-//       );
-//   }
-
-//   return (
-//     <Section id="contact" title="CONTACT" subtitle="Let's make something out of the box.">
-//       <div className="grid md:grid-cols-2 gap-6">
-//         <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-//           <div>
-//             <label htmlFor="name" className="text-sm text-white/70">Name</label>
-//             <input id="name" type="text" name="name" required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/40" placeholder="Your name" />
-//           </div>
-//           <div>
-//             <label htmlFor="email" className="text-sm text-white/70">Email</label>
-//             <input id="email" type="email" name="email" required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="you@example.com" />
-//             <ValidationError prefix="Email" field="email" errors={state.errors} className="text-red-400 text-xs mt-1" />
-//           </div>
-//           <div>
-//             <label htmlFor="message" className="text-sm text-white/70">Message</label>
-//             <textarea id="message" name="message" rows={5} required className="mt-1 w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 focus:outline-none" placeholder="Tell me about your idea…"></textarea>
-//             <ValidationError prefix="Message" field="message" errors={state.errors} className="text-red-400 text-xs mt-1" />
-//           </div>
-//           <div className="flex gap-3">
-//             <button type="submit" disabled={state.submitting} className="px-6 py-3 rounded-2xl bg-white/10 border border-white/20 font-semibold tracking-wide disabled:opacity-50">
-//               {state.submitting ? "Sending..." : "Send"}
-//             </button>
-//           </div>
-//         </form>
-        
-
-//         <div 
-//           className="p-6 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden"
-//         >
-//           {/* 1. The Image - now with higher opacity and the glowing filter */}
-//           <img 
-//             src="/portrait2.png" // Your image with a transparent background
-//             alt="Glowing portrait background"
-//             className="absolute inset-0 w-full h-full object-contain z-0"
-//             style={{
-//               opacity: 0.8, // Increased opacity for better visibility
-//               filter: "drop-shadow(0 0 15px rgba(0, 191, 255, 0.8))" // The bright cyan glow
-//             }}
-//           />
-
-//           {/* 2. Content Container - now gets the blur and background overlay */}
-//           <div 
-//             className="relative z-10 w-full h-full" // Ensure it covers the whole area
-//             style={{
-//                 backgroundColor: "rgba(10, 13, 20, 0.1)", // Dark, semi-transparent overlay
-//                 backdropFilter: "blur(0.5px)" // Apply blur ONLY to this layer, not the image
-//             }}
-//           >
-//             <h3 className="font-semibold text-2xl mb-4 text-white">Find me on</h3>
-//             <div className="space-y-3">
-              
-//               {/* GitHub Link */}
-//               <a 
-//                 href="https://github.com/NarendraKhadayat"
-//                 target="_blank"
-//                 rel="noopener noreferrer"
-//                 className="flex items-center gap-4 p-4 rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-all duration-300 hover:scale-105"
-//               >
-//                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/70"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-//                 <span className="font-semibold">GitHub</span>
-//               </a>
-
-//               {/* LinkedIn Link */}
-//               <a 
-//                 href="https://www.linkedin.com/in/narendra-khadayat-821aa81ba/"
-//                 target="_blank"
-//                 rel="noopener noreferrer"
-//                 className="flex items-center gap-4 p-4 rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-all duration-300 hover:scale-105"
-//               >
-//                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/70"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
-//                 <span className="font-semibold">LinkedIn</span>
-//               </a>
-
-//               {/* LeetCode Link */}
-//               <a 
-//                 href="https://leetcode.com/u/Narendra_Khadayat/"
-//                 target="_blank"
-//                 rel="noopener noreferrer"
-//                 className="flex items-center gap-4 p-4 rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 transition-all duration-300 hover:scale-105"
-//               >
-//                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white/70"><path d="M13.483 0a1.374 1.374 0 0 0-1.374 1.374v10.115h-5.996V1.374A1.374 1.374 0 0 0 4.739 0H1.374A1.374 1.374 0 0 0 0 1.374v18.252A1.374 1.374 0 0 0 1.374 21h3.365a1.374 1.374 0 0 0 1.374-1.374v-5.255h5.996v5.255a1.374 1.374 0 0 0 1.374 1.374h3.365a1.374 1.374 0 0 0 1.374-1.374V1.374A1.374 1.374 0 0 0 18.261 0h-4.778zM22.626 24h-3.365a1.374 1.374 0 0 1-1.374-1.374v-5.255H11.89V22.626A1.374 1.374 0 0 1 10.517 24H7.152a1.374 1.374 0 0 1-1.374-1.374V3.374A1.374 1.374 0 0 1 7.152 2h3.365a1.374 1.374 0 0 1 1.374 1.374v10.115h5.996V3.374A1.374 1.374 0 0 1 19.261 2h3.365a1.374 1.374 0 0 1 1.374 1.374v19.252A1.374 1.374 0 0 1 22.626 24z"></path></svg>
-//                 <span className="font-semibold">LeetCode</span>
-//               </a>
-//               {/* Discord Link */}
-//             <a 
-//               href="https://discord.com/users/1115298133124075530" // <-- Your Discord server invite URL
-//               target="_blank"
-//               rel="noopener noreferrer"
-//               className="flex items-center gap-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm hover:bg-black/50 border border-white/10 transition-all duration-300 hover:scale-105"
-//             >
-//               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white/70"><path d="M19.54 0c1.356 0 2.46 1.104 2.46 2.46v19.08c0 1.356-1.104 2.46-2.46 2.46H4.46C3.104 24 2 22.896 2 21.54V2.46C2 1.104 3.104 0 4.46 0h15.08zm-2.46 6.96h-1.44c-.432 0-.816.36-1.008.744-2.256-1.44-4.824-1.44-7.08 0-.192-.384-.576-.744-1.008-.744H4.5v10.08h1.44c.432 0 .816-.36.984-.72 1.44.72 2.88 1.224 4.584 1.224 1.704 0 3.144-.504 4.584-1.224.168.36.528.72.984.72h1.44V6.96zM8.76 13.8c-.84 0-1.536-.672-1.536-1.512s.696-1.512 1.536-1.512c.816 0 1.536.672 1.536 1.512s-.72 1.512-1.536 1.512zm6.48 0c-.84 0-1.536-.672-1.536-1.512s.696-1.512 1.536-1.512c.816 0 1.536.672 1.536 1.512s-.72 1.512-1.536 1.512z"></path></svg>
-//               <span className="font-semibold">Discord</span>
-//             </a>
-//               {/* Gmail Link */}
-//             <a 
-//               href="mailto:narendrakhadayat50@gmail.com" // <-- Your email address
-//               target="_blank"
-//               rel="noopener noreferrer"
-//               className="flex items-center gap-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm hover:bg-black/50 border border-white/10 transition-all duration-300 hover:scale-105"
-//             >
-//               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white/70"><path d="M24 4.5v15c0 .825-.675 1.5-1.5 1.5H1.5C.675 21 0 20.325 0 19.5v-15C0 3.675.675 3 1.5 3h21C23.325 3 24 3.675 24 4.5zm-1.5-1.5L12 11.25 1.5 3h21zm-21 15h21v-12.25L12 14.25 1.5 6.75V18z"></path></svg>
-//               <span className="font-semibold">Gmail</span>
-//             </a>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </Section>
-//   );
-// }
-
 function Footer() {
   return (
     <footer className="py-12 text-center text-white/60">
@@ -933,106 +627,7 @@ function Footer() {
   );
 }
 
-// chatboat---------
-// function Chatbot() {
-//   const [isOpen, setIsOpen] = useState(false);
-//   return (
-//     <div className="fixed bottom-6 right-6 z-50">
-//       <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-//         <div className="w-80 h-96 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-2xl shadow-2xl mb-4 flex flex-col">
-//           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-//             <h3 className="font-bold text-slate-800 dark:text-white">AI Assistant</h3>
-//             <p className="text-xs text-slate-500 dark:text-slate-400">Ask me about Narendra's skills or projects.</p>
-//           </div>
-//           <div className="flex-grow p-4 text-sm text-slate-600 dark:text-slate-300">
-//             <p>Hello! How can I help you?</p>
-//           </div>
-//           <div className="p-2 border-t border-slate-200 dark:border-slate-700">
-//             <input type="text" placeholder="Type your question..." className="w-full bg-slate-200 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-//           </div>
-//         </div>
-//       </div>
-//       <button onClick={() => setIsOpen(!isOpen)} className="w-16 h-16 bg-cyan-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-cyan-600 transition-colors text-3xl">
-//         🤖
-//       </button>
-//     </div>
-//   );
-// }
-
-
-// function Chatbot() {
-//   const [isOpen, setIsOpen] = useState(false);
-//   const [messages, setMessages] = useState<{ text: string; sender: 'user' | 'bot' }[]>([
-//     { text: "Hello! Ask me about Narendra's skills or projects.", sender: 'bot' }
-//   ]);
-//   const [inputValue, setInputValue] = useState("");
-//   const chatEndRef = useRef<HTMLDivElement>(null);
-
-//   useEffect(() => {
-//     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-//   }, [messages]);
-
-//   const handleSendMessage = (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (!inputValue.trim()) return;
-
-//     const userMessage = { text: inputValue, sender: 'user' as const };
-//     setMessages(prev => [...prev, userMessage]);
-//     setInputValue("");
-
-//     // Simple keyword-based bot logic
-//     const last = inputValue.toLowerCase();
-//     const botResponse = 
-//         last.includes("skill") ? "Narendra is skilled in Python, React, TensorFlow, and Three.js, among others." :
-//         last.includes("project") ? "He has worked on several projects, including a Sarcasm Detection AI and a generative art engine. You can see them in the Projects section!" :
-//         last.includes("contact") || last.includes("hire") ? `Great! You can reach out to him via the contact form.` :
-//         "Thanks for your message! I'm a simple bot. For more complex questions, please use the contact form.";
-
-//     setTimeout(() => {
-//       setMessages(prev => [...prev, { text: botResponse, sender: 'bot' as const }]);
-//     }, 800);
-//   };
-
-//   return (
-//     <div className="fixed bottom-6 right-6 z-50">
-//       <motion.div
-//         initial={false}
-//         animate={isOpen ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.9 }}
-//         transition={{ duration: 0.3, ease: "easeOut" }}
-//         className="w-80 h-96 bg-black/30 backdrop-blur-md rounded-2xl shadow-2xl mb-4 flex flex-col origin-bottom-right"
-//         style={{ visibility: isOpen ? 'visible' : 'hidden' }}
-//       >
-//         <div className="p-4 border-b border-white/10">
-//           <h3 className="font-bold text-white">AI Assistant</h3>
-//           <p className="text-xs text-white/60">Powered by simple logic</p>
-//         </div>
-//         <div className="flex-grow p-4 overflow-y-auto space-y-3">
-//           {messages.map((msg, index) => (
-//             <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-//               <p className={`max-w-[80%] text-sm px-3 py-2 rounded-xl ${msg.sender === 'user' ? 'bg-fuchsia-500/60 text-white' : 'bg-white/10 text-white'}`}>
-//                 {msg.text}
-//               </p>
-//             </div>
-//           ))}
-//           <div ref={chatEndRef} />
-//         </div>
-//         <form onSubmit={handleSendMessage} className="p-2 border-t border-white/10">
-//           <input 
-//             type="text" 
-//             placeholder="Type your question..." 
-//             value={inputValue}
-//             onChange={(e) => setInputValue(e.target.value)}
-//             className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 text-white" 
-//           />
-//         </form>
-//       </motion.div>
-//       <button onClick={() => setIsOpen(!isOpen)} className="w-16 h-16 bg-white/10 border border-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg hover:bg-white/20 transition-colors text-3xl">
-//         {isOpen ? '✕' : '🤖'}
-//       </button>
-//     </div>
-//   );
-// }
-// ========== ROOT COMPONENT ==========
+// ROOT COMPONENT 
 export default function UltraPortfolio() {
   const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
   const [isHoveringLink, setIsHoveringLink] = useState(false);
