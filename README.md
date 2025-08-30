@@ -1,69 +1,33 @@
-# React + TypeScript + Vite
+# Personal Portfolio - Narendra Khadayat
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome! & this is my personal portfolio, a fully interactive single-page application built with React and 3.js.
 
-Currently, two official plugins are available:
+### [➡️ Portfolio View Live ](https://narendra-khadayat.vercel.app/) --
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Portfolio Preview](public/og-image.jpg) 
+## Key Features
 
-## Expanding the ESLint configuration
+This portfolio is built from the ground up and includes several features:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+* **3D NN Scene:** The Home background is a 3D scene rendered with **React 3 Fiber**, featuring a custom "Neural Network".
+* **Animations:** Smooth scroll-based animations and micro-interactions powered by **GSAP (GreenSock Animation Platform)**.
+* **Custom Shaders:** The background effects and interactive elements in the "Neural Lab" are created with custom **GLSL shaders**.
+* **Dark/Light Mode:** A sleek toggle to switch between dark and light themes.
+* **Functional Contact Form:** The contact form is fully integrated with **Formspree** to send emails directly to my inbox.
+* **Fully Responsive Design:** A clean, modern layout that works seamlessly across all devices, built with **Tailwind CSS**.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+This project was built using a modern, high-performance tech stack:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+* **Framework:** [React](https://react.dev/) (with Vite)
+* **Language:** [TypeScript](https://www.typescriptlang.org/)
+* **3D Rendering:** [Three.js](https://threejs.org/) & [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction)
+* **Animation:** [GSAP](https://gsap.com/) & [Framer Motion](https://www.framer.com/motion/)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Deployment:** [Vercel](https://vercel.com/)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Contact
+Narendra Khadayat – Feel free to reach out!
+---
